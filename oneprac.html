@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head> 
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TREENITY</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+:root {
+  --sage: #779a51;
+  --sage-dark: #688255;
+  --gold: #c9a44c;
+}
+/*bg*/
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.75);
+  z-index: -1;    
+  pointer-events: none;
+}
+ .search { position: absolute; top: 50px; right: 10px; background: white; padding: 5px; border-radius: 4px; box-shadow: 0 0 5px rgba(0,0,0,0.3); z-index: 1001; }
+
+@keyframes fadeInBg {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/*hdr*/
+h1 {
+  background: linear-gradient(135deg, var(--sage), var(--sage-dark));
+  color: #1c542b;
+  padding: 30px;
+  margin: 0;
+  text-align: center;
+  border-bottom: 7px solid var(--gold);
+}
+
+/*bg*/
+body {
+  margin: 0;
+  font-family: "Times New Roman", serif;
+  background-color: rgba(100, 175, 75, 0.532);
+  background-size: cover;
+  animation: fadeInBg 1s ease-in-out forwards;
+  opacity: 1;
+}
+
+/*side*/
+#sideMenu {
+  position: fixed;
+  margin-top:40px;
+  top: 0;  
+  left: -260px; 
+  width: 260px;
+  height: 100%;
+  background:linear-gradient(135deg, var(--sage), var(--sage-dark));
+  color: white;
+  padding: 20px;
+  transition: left 0.4s ease;
+  z-index: 99999;
+  overflow-y: auto;
+
+}
+#sideMenu.open { left: 0; }
+
+/*mnubttn*/
+#menuBtn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  width: 55px;
+  height: 55px;
+  font-size: 32px;
+  font-weight: bold;
+  background: #779a51;
+  color: #c9a44c;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  z-index: 100000;
+}
+#menuBtn:hover {
+  box-shadow:
+    0 0 10px rgba(201, 164, 76, 0.8),
+    0 0 20px rgba(201, 164, 76, 0.6),
+    0 0 30px rgba(201, 164, 76, 0.4);
+  transform: scale(1.05);
+}
+
+/*tr inv*/
+.menu-item {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: rgb(255, 255, 255);
+  text-align: left;
+  padding: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.menu-item:hover {
+  background: rgba(255,255,255,0.25);
+}
+/*mp*/
+#map {
+  width: 90%;
+  height: 600px;
+  margin: 30px auto;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(218, 167, 64, 0.34);
+}
+
+
+
+.telegram-float:hover {
+  transform: translateY(-3px);
+}
+
+#inventoryList {
+  margin-top: 15px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.inventory-card {
+  background: rgba(255,255,255,0.15);
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+
+<button id="menuBtn">☰</button>
+
+<div id="sideMenu">
+  <h3>🌿 Menu 🌿</h3>
+  <a href="onetwo.html">🌳 Tree Inventory 🌳</a>
+
+  <div id="inventoryList"></div>
+</div>
+
+<h1> 🌱 Treenity: Tree Inventory Map 🌱</h1>
+
+
+<div id="map"></div>
+
+<div class="loader"></div>
+<link rel="stylesheet" href="amazeballs.css">
+<div class="search">
+    <input type="text" id="latlng-input" placeholder="Latitude,Longitude">
+    <button id="search-btn">Search</button>
+</div>
+<div id="chat-container">
+    <script src="https://elfsightcdn.com/platform.js" async></script>
+    <div class="elfsight-app-c4f367b4-d8f8-400b-9861-8d5bda1a9d25" data-elfsight-app-lazy></div>
+</div>
+
+<div id="chat-container">
+    <script src="https://elfsightcdn.com/platform.js" async></script>
+    <div class="elfsight-app-c4f367b4-d8f8-400b-9861-8d5bda1a9d25" data-elfsight-app-lazy></div>
+</div>
+
+
+<script>
+
+
+
+window.addEventListener("load", function () {
+  const loader = document.querySelector(".loader");
+  if (loader) loader.style.display = "none";
+});
+
+const map = L.map('map').setView([51.505, -0.09], 13);
+const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' });
+const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles &copy; Esri' });
+
+osm.addTo(map);
+L.control.layers({"Street Map": osm, "Satellite": satellite}).addTo(map);
+
+const usagiIcon = L.icon({ iconUrl: 'usagi.png', iconSize: [40, 40], iconAnchor: [20, 40], popupAnchor: [0, -40] });
+
+function createMarker(latlng, label) {
+    const marker = L.marker(latlng, { icon: usagiIcon }).addTo(map).bindPopup(`<b>${label}</b><br>Lat: ${latlng.lat.toFixed(6)}<br>Lng: ${latlng.lng.toFixed(6)}`);
+    marker.on('contextmenu', () => map.removeLayer(marker));
+    marker.openPopup();
+}
+
+let liveMarker, accuracyCircle, hasCentered = false;
+if ("geolocation" in navigator) {
+    navigator.geolocation.watchPosition(position => {
+        const lat = position.coords.latitude, lon = position.coords.longitude, accuracy = position.coords.accuracy;
+        if (!liveMarker) {
+            liveMarker = L.marker([lat, lon], { icon: usagiIcon }).addTo(map).bindTooltip("Map",{permanent:true,direction:"top"}).openTooltip();
+            accuracyCircle = L.circle([lat, lon], { radius: accuracy, color: '#1e90ff', fillColor: '#1e90ff', fillOpacity: 0.15 }).addTo(map);
+        } else {
+            liveMarker.setLatLng([lat, lon]);
+            accuracyCircle.setLatLng([lat, lon]).setRadius(accuracy);
+        }
+        if (!hasCentered) { map.setView([lat, lon], 17); hasCentered=true; }
+    }, error => { alert("Location access denied or unavailable."); console.error(error); }, { enableHighAccuracy:true, maximumAge:0, timeout:10000 });
+} else { alert("Geolocation not supported."); }
+
+map.on('click', e => { const label = prompt("Enter marker label:"); if (!label) return; createMarker(e.latlng, label);
+  const condition = prompt("Enter tree condition:\nHealthy / Fair / Poor / Damaged");
+    if (!condition) return;
+
+    createMarker(e.latlng, label, condition);
+
+    fetch("https://script.google.com/macros/s/AKfycbzTBKUGVSIOSfNI_8ZxGk5-H69ZWyfLN1wLI5wXniA3SjFyHxKjf88ddvefhT9MQ7AL/exec", {
+        method: "POST",
+        body: new URLSearchParams({
+            count: 1,
+            type: label,
+            condition: condition,
+            lat: e.latlng.lat,
+            lng: e.latlng.lng
+        })
+    })
+    .then(res => res.json())
+    .then(data => console.log("Saved:", data))
+    .catch(err => console.error("Error:", err));
+ });
+
+document.getElementById('search-btn').addEventListener('click', () => {
+    const input = document.getElementById('latlng-input').value.trim();
+    if(!input){ alert("Please Enter Coordinates"); return; }
+    const parts = input.split(',');
+    if(parts.length!==2){ alert("Please enter both Latitude and Longitude separated by a comma."); return; }
+    const lat=parseFloat(parts[0]), lng=parseFloat(parts[1]);
+    if(isNaN(lat)||isNaN(lng)){ alert("Invalid Latitude or Longitude"); return; }
+    L.marker([lat,lng], {icon: usagiIcon}).addTo(map).bindPopup(`Marker<br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`).openPopup();
+});
+
+const centerMarker = L.marker(map.getCenter(), {icon: usagiIcon}).addTo(map);
+
+const centerCoordsControl = L.control({ position: 'bottomleft' });
+centerCoordsControl.onAdd = function() {
+    this._div = L.DomUtil.create('div');
+    this._div.style.background = "white";
+    this._div.style.padding = "5px";
+    this._div.style.borderRadius = "4px";
+    this._div.style.zIndex = 1000;
+    return this._div;
+};
+centerCoordsControl.update = function(latlng) {
+    this._div.innerHTML = latlng ? `Center: ${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}` : "Center: -- , --";
+};
+centerCoordsControl.addTo(map);
+centerCoordsControl.update(map.getCenter());
+
+map.on('move', function() {
+    const center = map.getCenter();
+    centerMarker.setLatLng(center);
+    centerCoordsControl.update(center);
+
+});
+const menuBtn = document.getElementById("menuBtn");
+const sideMenu = document.getElementById("sideMenu");
+
+menuBtn.addEventListener("click", () => {
+  sideMenu.classList.toggle("open");
+});
+ 
+document.getElementById("inventoryBtn").addEventListener("click", () => {
+  document.getElementById("map").scrollIntoView({
+    behavior: "smooth"
+  });
+
+  sideMenu.classList.remove("open");
+});
+
+
+
+</script>
+
+</body>
+</html>
