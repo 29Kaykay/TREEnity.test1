@@ -200,6 +200,28 @@ body {
   overflow-y: auto;
 }
 
+.inventory-list {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.inventory-card {
+  background: white; /* Changed from transparent to white for better visibility */
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  border-top: 5px solid var(--sage);
+  transition: transform 0.2s;
+}
+
+.inventory-card:hover {
+  transform: translateY(-5px);
+}
+
 .inventory-card {
   background: rgba(255,255,255,0.15);
   padding: 10px;
@@ -217,38 +239,28 @@ body {
 
 <div id="sideMenu">
   <h3>🌿 Menu 🌿</h3>
-  <a href="oneprac.html">🌳 Back to Home Page 🌳</a>
-
-  
-  <div id="inventoryList"></div>
+  <a href="gps.html" style="color:white; text-decoration:none; padding:10px; display:block;">🌳 Back to Home Page 🌳</a>
 </div>
 
-<h1> 🌱 Treenity: Tree Inventory  🌱</h1>
+<h1> 🌱 Treenity: Tree Inventory 🌱</h1>
 
 <section class="summary">
   <div class="card ">🌲 <span id="totalTrees">0</span><br>Total Trees</div>
-  <div class="card green">💚 <span id="healthy">0</span><br>Healthy</div>
-  <div class="card yellow">⚠️ <span id="fair">0</span><br>Fair</div>
-  <div class="card orange">🟠 <span id="poor">0</span><br>Poor</div> 
-  <div class="card red">💔 <span id="Damaged">0</span><br>Damaged</div>
-
+ 
 </section>
 
 <input type="text" id="searchInput" placeholder="Search tree type...">
 <section class="filters">
   
-  <select id="conditionFilter">
-    <option value="">All Conditions</option>
-    <option value="Healthy">Healthy</option>
-    <option value="Fair">Fair</option>
-    <option value="Poor">Poor</option>
-    <option value="Damaged">Damaged</option>
-  </select>
+
 </section>
 
 <section id="inventoryList" class="inventory-list">
   <!-- Cards inserted by JS -->
 </section>
+
+<section id="inventoryList" class="inventory-list">
+  </section>
 
 <script>
 
@@ -256,50 +268,57 @@ const menuBtn = document.getElementById("menuBtn");
 const sideMenu = document.getElementById("sideMenu");
 
 menuBtn.addEventListener("click", () => {
-  sideMenu.classList.toggle("open");
-});
- 
-document.getElementById("inventoryBtn").addEventListener("click", () => {
-  document.getElementById("map").scrollIntoView({
-    behavior: "smooth"
-  });
-
-  sideMenu.classList.remove("open");
+    sideMenu.classList.toggle("open");
 });
 
-const INVENTORY_URL = "https://script.google.com/macros/s/AKfycbzTBKUGVSIOSfNI_8ZxGk5-H69ZWyfLN1wLI5wXniA3SjFyHxKjf88ddvefhT9MQ7AL/exec";
+const INVENTORY_URL = "https://script.google.com/macros/s/AKfycbzeoWR-nTLWL-iAHKflK3Y6Fov94X7Xo-AvMsdWaWBMvCiHLyS1F7bzIsyR9SZ7ibbb/exec";
 
-document.getElementById("inventoryBtn").addEventListener("click", () => {
-  fetch("https://script.google.com/macros/s/AKfycbzTBKUGVSIOSfNI_8ZxGk5-H69ZWyfLN1wLI5wXniA3SjFyHxKjf88ddvefhT9MQ7AL/exec")
-    .then(res => res.json())
-    .then(data => {
-      const list = document.getElementById("inventoryList");
-      list.innerHTML = "";
+let allTrees = []; // Store data globally for filtering
 
-      if (data.length === 0) {
-        list.innerHTML = "<p>No trees recorded yet.</p>";
-        return;
-      }
+async function fetchInventory() {
+    try {
+        const response = await fetch(INVENTORY_URL);
+        allTrees = await response.json();
+        renderTrees(allTrees); // Initial render
+    } catch (err) {
+        console.error("Error loading trees:", err);
+    }
+}
 
-      data.forEach(tree => {
+
+function renderTrees(data) {
+    const list = document.getElementById("inventoryList");
+    list.innerHTML = "";
+
+    data.forEach(tree => {
         const card = document.createElement("div");
         card.className = "inventory-card";
         card.innerHTML = `
-          <b>${tree.type}</b><br>
-          Condition: ${tree.condition}<br>
-           ${Number(tree.lat).toFixed(4)}, ${Number(tree.lng).toFixed(4)}
+            <div style="color: #1c542b; font-weight: bold; border-bottom: 1px solid #ddd; margin-bottom: 5px;">
+                ${(tree.type || "Unknown").toUpperCase()}
+            </div>
+            <b>Loc:</b> ${tree.lat}, ${tree.lng}
         `;
         list.appendChild(card);
-      });
-
-      sideMenu.classList.add("open");
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Failed to load inventory");
     });
-});
+
+    document.getElementById("totalTrees").textContent = data.length;
+}
+
+function filterData() {
+    const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+
+    const filtered = allTrees.filter(tree => {
+      return (tree.type || "").toLowerCase().includes(searchTerm);
+    });
+
+    renderTrees(filtered);
+}
+
+document.getElementById("searchInput").addEventListener("input", filterData);
+
+fetchInventory();
 </script>
 
-
+</body>
 </html>
